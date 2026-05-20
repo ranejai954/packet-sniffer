@@ -97,11 +97,11 @@ def export_to_csv():
     
     filename = f"{EXPORT_FOLDER}/packets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     with open(filename, 'w', newline='') as f:
-        # Get all field names from first packet
-        fieldnames = captured_packets[0].keys()
+        fieldnames = ['timestamp', 'src_ip', 'dst_ip', 'protocol', 'src_port', 'dst_port', 'size']
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(captured_packets)
+        for packet in captured_packets:
+            writer.writerow(packet)
     return filename
 
 def export_to_txt():
@@ -115,6 +115,7 @@ def export_to_txt():
         f.write("PACKET CAPTURE EXPORT\n")
         f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Total Packets: {len(captured_packets)}\n")
+        f.write(f"TCP: {packet_stats['TCP']} | UDP: {packet_stats['UDP']} | ICMP: {packet_stats['ICMP']}\n")
         f.write("=" * 80 + "\n\n")
         
         for i, p in enumerate(captured_packets, 1):
@@ -159,7 +160,7 @@ def get_stats():
     return jsonify({
         'total_packets': len(captured_packets),
         'protocol_stats': packet_stats,
-        'recent_packets': captured_packets[-20:]  # Last 20 packets
+        'recent_packets': captured_packets[-20:]
     })
 
 @app.route('/api/clear', methods=['POST'])
@@ -174,7 +175,6 @@ def clear_packets():
 
 @app.route('/api/export/json', methods=['POST'])
 def api_export_json():
-    """Export packets to JSON"""
     filename = export_to_json()
     if filename:
         return jsonify({'status': 'success', 'file': filename, 'count': len(captured_packets)})
@@ -182,7 +182,6 @@ def api_export_json():
 
 @app.route('/api/export/csv', methods=['POST'])
 def api_export_csv():
-    """Export packets to CSV"""
     filename = export_to_csv()
     if filename:
         return jsonify({'status': 'success', 'file': filename, 'count': len(captured_packets)})
@@ -190,7 +189,6 @@ def api_export_csv():
 
 @app.route('/api/export/txt', methods=['POST'])
 def api_export_txt():
-    """Export packets to TXT"""
     filename = export_to_txt()
     if filename:
         return jsonify({'status': 'success', 'file': filename, 'count': len(captured_packets)})
@@ -223,13 +221,11 @@ def download_export(filename):
 
 @socketio.on('connect')
 def handle_connect():
-    """Client connected"""
     print('Client connected')
     emit('connected', {'data': 'Connected to packet sniffer'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """Client disconnected"""
     print('Client disconnected')
 
 # ========== MAIN ==========
