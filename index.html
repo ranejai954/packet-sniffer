@@ -314,6 +314,7 @@
                             display: flex;
                             gap: 10px;
                             flex-wrap: wrap;
+                            align-items: center;
                         }
                         button {
                             background: #00ff41;
@@ -323,40 +324,16 @@
                             border-radius: 5px;
                             cursor: pointer;
                             font-weight: bold;
+                            font-size: 14px;
                         }
-                        button:hover { opacity: 0.8; }
-                        .dropdown {
-                            position: relative;
-                            display: inline-block;
-                        }
-                        .dropdown-content {
-                            display: none;
-                            position: absolute;
-                            background: #0f1233;
-                            min-width: 140px;
-                            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-                            border-radius: 5px;
-                            z-index: 1;
-                        }
-                        .dropdown-content button {
-                            display: block;
-                            width: 100%;
-                            text-align: left;
-                            background: #0f1233;
-                            color: #00ff41;
-                            border: none;
-                            padding: 10px;
-                        }
-                        .dropdown-content button:hover {
-                            background: #1a1f4a;
-                        }
+                        button:hover { opacity: 0.8; transform: scale(1.02); }
                         .stats {
                             background: #0f1233;
                             padding: 15px;
                             border-radius: 8px;
                             margin-bottom: 20px;
                             display: grid;
-                            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                            grid-template-columns: repeat(4, 1fr);
                             gap: 10px;
                         }
                         .stat {
@@ -383,20 +360,14 @@
                             overflow-y: auto;
                         }
                         h3 { margin-bottom: 10px; color: #fff; }
-                        .toast {
-                            position: fixed;
-                            bottom: 20px;
-                            right: 20px;
-                            background: #4CAF50;
-                            color: white;
-                            padding: 10px 20px;
-                            border-radius: 5px;
-                            animation: fadeOut 2s ease-out forwards;
+                        .export-buttons {
+                            display: inline-flex;
+                            gap: 5px;
                         }
-                        @keyframes fadeOut {
-                            0% { opacity: 1; }
-                            70% { opacity: 1; }
-                            100% { opacity: 0; visibility: hidden; }
+                        .export-buttons button {
+                            background: #2196F3;
+                            padding: 8px 12px;
+                            font-size: 12px;
                         }
                     </style>
                 </head>
@@ -405,13 +376,10 @@
                         <button onclick='startSimulation()'>▶ Start</button>
                         <button onclick='stopSimulation()'>⏹ Stop</button>
                         <button onclick='clearPackets()'>🗑 Clear</button>
-                        <div class='dropdown'>
-                            <button onclick='toggleDropdown()'>💾 Export ▼</button>
-                            <div id='exportMenu' class='dropdown-content'>
-                                <button onclick='exportData(\"json\")'>📄 JSON</button>
-                                <button onclick='exportData(\"csv\")'>📊 CSV</button>
-                                <button onclick='exportData(\"txt\")'>📝 TXT</button>
-                            </div>
+                        <div class='export-buttons'>
+                            <button onclick='exportData(\"json\")'>📄 JSON</button>
+                            <button onclick='exportData(\"csv\")'>📊 CSV</button>
+                            <button onclick='exportData(\"txt\")'>📝 TXT</button>
                         </div>
                     </div>
                     
@@ -430,13 +398,14 @@
                         let packets = [];
                         let stats = { total: 0, tcp: 0, udp: 0, icmp: 0 };
                         
+                        const protocolsList = ['TCP', 'UDP', 'ICMP'];
+                        const ipsList = ['192.168.1.1', '192.168.1.100', '10.0.0.1', '172.16.0.1', '8.8.8.8', '1.1.1.1', '192.168.0.105', '10.0.0.25'];
+                        
                         function generatePacket() {
-                            const protocols = ['TCP', 'UDP', 'ICMP'];
-                            const proto = protocols[Math.floor(Math.random() * 3)];
-                            const ips = ['192.168.1.1', '192.168.1.100', '10.0.0.1', '172.16.0.1', '8.8.8.8', '1.1.1.1', '192.168.0.105', '10.0.0.25'];
-                            const src = ips[Math.floor(Math.random() * ips.length)];
-                            let dst = ips[Math.floor(Math.random() * ips.length)];
-                            while (src === dst) dst = ips[Math.floor(Math.random() * ips.length)];
+                            const proto = protocolsList[Math.floor(Math.random() * protocolsList.length)];
+                            const src = ipsList[Math.floor(Math.random() * ipsList.length)];
+                            let dst = ipsList[Math.floor(Math.random() * ipsList.length)];
+                            while (src === dst) dst = ipsList[Math.floor(Math.random() * ipsList.length)];
                             
                             return {
                                 time: new Date().toLocaleTimeString(),
@@ -472,16 +441,19 @@
                         }
                         
                         function startSimulation() {
-                            if (simulation) return;
-                            simulation = setInterval(addPacket, 800);
-                            showToast('✅ Capture started');
+                            if (simulation) {
+                                clearInterval(simulation);
+                                simulation = null;
+                            }
+                            simulation = setInterval(function() {
+                                addPacket();
+                            }, 800);
                         }
                         
                         function stopSimulation() {
                             if (simulation) {
                                 clearInterval(simulation);
                                 simulation = null;
-                                showToast('⏹️ Capture stopped');
                             }
                         }
                         
@@ -494,18 +466,12 @@
                             document.getElementById('udp').textContent = '0';
                             document.getElementById('icmp').textContent = '0';
                             document.getElementById('packets').innerHTML = '';
-                            showToast('🗑️ Packets cleared');
                             startSimulation();
-                        }
-                        
-                        function toggleDropdown() {
-                            const menu = document.getElementById('exportMenu');
-                            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
                         }
                         
                         function exportData(format) {
                             if (packets.length === 0) {
-                                showToast('❌ No packets to export!', 'error');
+                                alert('No packets to export!');
                                 return;
                             }
                             
@@ -548,28 +514,12 @@
                             link.download = filename;
                             link.click();
                             URL.revokeObjectURL(link.href);
-                            showToast(`✅ Exported as ${format.toUpperCase()}`);
                         }
                         
-                        function showToast(msg, type = 'success') {
-                            const toast = document.createElement('div');
-                            toast.className = 'toast';
-                                    toast.textContent = msg;
-                            if (type === 'error') toast.style.background = '#f44336';
-                            document.body.appendChild(toast);
-                            setTimeout(() => toast.remove(), 2000);
-                        }
-                        
-                        // Close dropdown when clicking outside
-                        document.addEventListener('click', function(event) {
-                            const menu = document.getElementById('exportMenu');
-                            if (menu && !event.target.closest('.dropdown')) {
-                                menu.style.display = 'none';
-                            }
-                        });
-                        
-                        // AUTO-START on load
-                        startSimulation();
+                        // AUTO-START when page loads
+                        window.onload = function() {
+                            startSimulation();
+                        };
                     </script>
                 </body>
                 </html>
