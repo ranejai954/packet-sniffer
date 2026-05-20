@@ -43,7 +43,7 @@
         }
         
         .subtitle {
-            color: #666;
+            color: #333;
             margin-bottom: 20px;
             font-size: 1.1em;
         }
@@ -127,7 +127,7 @@
         }
         
         .feature-card p {
-            color: #666;
+            color: #444;
             line-height: 1.5;
         }
         
@@ -170,7 +170,7 @@
             background: #0a0e27;
         }
         
-        /* Instructions */
+        /* Instructions - FIXED for better readability */
         .instructions {
             background: white;
             border-radius: 20px;
@@ -184,22 +184,30 @@
         }
         
         code {
-            background: #f4f4f4;
+            background: #e8e8e8;
             padding: 2px 6px;
             border-radius: 4px;
             font-family: monospace;
             font-size: 0.9em;
+            color: #d14;
         }
         
         pre {
-            background: #1e1e1e;
-            color: #d4d4d4;
+            background: #f8f8f8;
+            color: #333;
             padding: 15px;
             border-radius: 8px;
             overflow-x: auto;
             margin: 15px 0;
             font-family: monospace;
             font-size: 0.9em;
+            border: 1px solid #ddd;
+        }
+        
+        pre code {
+            background: transparent;
+            color: #333;
+            padding: 0;
         }
         
         .note {
@@ -208,6 +216,17 @@
             padding: 15px;
             border-radius: 8px;
             margin: 20px 0;
+            color: #856404;
+        }
+        
+        .requirements-list, .tech-list {
+            margin-left: 20px;
+            line-height: 1.8;
+            color: #333;
+        }
+        
+        .requirements-list li, .tech-list li {
+            margin-bottom: 5px;
         }
         
         .footer {
@@ -360,6 +379,7 @@
                         <button onclick='startSimulation()'>▶ Start</button>
                         <button onclick='stopSimulation()'>⏹ Stop</button>
                         <button onclick='clearPackets()'>🗑 Clear</button>
+                        <button onclick='exportToTXT()'>💾 Save Data</button>
                     </div>
                     
                     <div class='stats'>
@@ -374,6 +394,7 @@
                     
                     <script>
                         let simulation = null;
+                        let packets = [];
                         let stats = { total: 0, tcp: 0, udp: 0, icmp: 0 };
                         
                         function generatePacket() {
@@ -396,6 +417,7 @@
                         
                         function addPacket() {
                             const p = generatePacket();
+                            packets.unshift(p);
                             stats.total++;
                             stats[p.protocol.toLowerCase()]++;
                             
@@ -430,12 +452,44 @@
                         
                         function clearPackets() {
                             stopSimulation();
+                            packets = [];
                             stats = { total: 0, tcp: 0, udp: 0, icmp: 0 };
                             document.getElementById('total').textContent = '0';
                             document.getElementById('tcp').textContent = '0';
                             document.getElementById('udp').textContent = '0';
                             document.getElementById('icmp').textContent = '0';
                             document.getElementById('packets').innerHTML = '';
+                        }
+                        
+                        function exportToTXT() {
+                            if (packets.length === 0) {
+                                alert('No packets to export!');
+                                return;
+                            }
+                            
+                            let content = 'PACKET CAPTURE EXPORT (SIMULATED DEMO)\n';
+                            content += '='.repeat(60) + '\n';
+                            content += `Date: ${new Date().toLocaleString()}\n`;
+                            content += `Total Packets: ${packets.length}\n`;
+                            content += `TCP: ${stats.tcp} | UDP: ${stats.udp} | ICMP: ${stats.icmp}\n`;
+                            content += '='.repeat(60) + '\n\n';
+                            
+                            packets.forEach((p, i) => {
+                                content += `Packet #${i+1}\n`;
+                                content += `  Time: ${p.time}\n`;
+                                content += `  Source: ${p.src}\n`;
+                                content += `  Destination: ${p.dst}\n`;
+                                content += `  Protocol: ${p.protocol}\n`;
+                                content += `  Size: ${p.size} bytes\n`;
+                                content += '-'.repeat(40) + '\n';
+                            });
+                            
+                            const blob = new Blob([content], {type: 'text/plain'});
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = `packet_dump_${Date.now()}.txt`;
+                            link.click();
+                            URL.revokeObjectURL(link.href);
                         }
                         
                         // Auto-start on load
@@ -446,7 +500,7 @@
             "></iframe>
         </div>
         
-        <!-- Instructions -->
+        <!-- Instructions - NOW WITH BETTER READABILITY -->
         <div class="instructions">
             <h3>🚀 Run Real Packet Sniffer on Your Machine</h3>
             
@@ -462,26 +516,33 @@ cd packet-sniffer
 pip install -r requirements.txt
 
 # 3. Run the application
-sudo python web_sniffer.py   # Linux/Mac (requires sudo)
+sudo python sniffer.py   # Linux/Mac (requires sudo)
 # OR
-python web_sniffer.py        # Windows (Run as Administrator)
+python sniffer.py        # Windows (Run as Administrator)
 
 # 4. Open browser and go to:
 http://localhost:5000</code></pre>
             
             <h3>📋 Requirements</h3>
-            <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
-                <li>Python 3.7 or higher</li>
-                <li>Administrator/root privileges (for packet capture)</li>
-                <li>Network interface with internet traffic</li>
+            <ul class="requirements-list">
+                <li>✅ Python 3.7 or higher</li>
+                <li>✅ Administrator/root privileges (for packet capture)</li>
+                <li>✅ Network interface with internet traffic</li>
             </ul>
             
             <h3 style="margin-top: 20px;">🔧 Technologies Used</h3>
-            <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
+            <ul class="tech-list">
                 <li><strong>Backend:</strong> Python, Flask, Scapy</li>
                 <li><strong>Frontend:</strong> HTML5, CSS3, JavaScript</li>
                 <li><strong>Real-time:</strong> WebSocket (Socket.IO)</li>
-                <li><strong>Data Format:</strong> JSON</li>
+                <li><strong>Data Format:</strong> JSON, CSV, TXT</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;">💾 Export Captured Data</h3>
+            <ul class="tech-list">
+                <li>📄 <strong>JSON</strong> - Structured data for programming</li>
+                <li>📊 <strong>CSV</strong> - Open in Excel/Google Sheets</li>
+                <li>📝 <strong>TXT</strong> - Human-readable format</li>
             </ul>
         </div>
         
