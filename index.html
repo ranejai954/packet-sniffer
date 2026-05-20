@@ -161,11 +161,82 @@
             font-weight: bold;
         }
         
-        .demo-frame {
-            width: 100%;
-            height: 600px;
-            border: none;
+        /* Demo container styles */
+        .demo-container {
+            padding: 20px;
             background: #0a0e27;
+            min-height: 600px;
+        }
+        
+        .demo-controls {
+            background: #0f1233;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .demo-btn {
+            background: #00ff41;
+            color: #0a0e27;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .demo-btn:hover {
+            opacity: 0.8;
+            transform: scale(1.02);
+        }
+        
+        .demo-btn-export {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .demo-stats {
+            background: #0f1233;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .demo-stat {
+            text-align: center;
+            color: #00ff41;
+        }
+        
+        .demo-stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .demo-packet {
+            background: #0f1233;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-left: 3px solid #00ff41;
+            font-size: 12px;
+            font-family: monospace;
+            color: #00ff41;
+        }
+        
+        .demo-packet.tcp { border-left-color: #4CAF50; }
+        .demo-packet.udp { border-left-color: #2196F3; }
+        .demo-packet.icmp { border-left-color: #ff9800; }
+        
+        .demo-packet-list {
+            max-height: 400px;
+            overflow-y: auto;
         }
         
         .instructions {
@@ -201,12 +272,6 @@
             border: 1px solid #ddd;
         }
         
-        pre code {
-            background: transparent;
-            color: #333;
-            padding: 0;
-        }
-        
         .note {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
@@ -237,8 +302,8 @@
             h1 {
                 font-size: 1.8em;
             }
-            .demo-frame {
-                height: 500px;
+            .demo-stats {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
@@ -294,236 +359,27 @@
                 <span class="demo-title">🎮 Live Demo Mode</span>
                 <span class="demo-badge">⚡ Simulated Traffic | Auto-Starts</span>
             </div>
-            <iframe class="demo-frame" srcdoc="
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body {
-                            font-family: 'Courier New', monospace;
-                            background: #0a0e27;
-                            color: #00ff41;
-                            padding: 20px;
-                        }
-                        .controls {
-                            background: #0f1233;
-                            padding: 15px;
-                            border-radius: 8px;
-                            margin-bottom: 20px;
-                            display: flex;
-                            gap: 10px;
-                            flex-wrap: wrap;
-                            align-items: center;
-                        }
-                        button {
-                            background: #00ff41;
-                            color: #0a0e27;
-                            border: none;
-                            padding: 8px 16px;
-                            border-radius: 5px;
-                            cursor: pointer;
-                            font-weight: bold;
-                            font-size: 14px;
-                        }
-                        button:hover { opacity: 0.8; transform: scale(1.02); }
-                        .stats {
-                            background: #0f1233;
-                            padding: 15px;
-                            border-radius: 8px;
-                            margin-bottom: 20px;
-                            display: grid;
-                            grid-template-columns: repeat(4, 1fr);
-                            gap: 10px;
-                        }
-                        .stat {
-                            text-align: center;
-                        }
-                        .stat-value {
-                            font-size: 1.5em;
-                            font-weight: bold;
-                            color: #00ff41;
-                        }
-                        .packet {
-                            background: #0f1233;
-                            padding: 8px 12px;
-                            margin: 5px 0;
-                            border-left: 3px solid #00ff41;
-                            font-size: 12px;
-                            font-family: monospace;
-                        }
-                        .packet.tcp { border-left-color: #4CAF50; }
-                        .packet.udp { border-left-color: #2196F3; }
-                        .packet.icmp { border-left-color: #ff9800; }
-                        .packet-list {
-                            max-height: 400px;
-                            overflow-y: auto;
-                        }
-                        h3 { margin-bottom: 10px; color: #fff; }
-                        .export-buttons {
-                            display: inline-flex;
-                            gap: 5px;
-                        }
-                        .export-buttons button {
-                            background: #2196F3;
-                            padding: 8px 12px;
-                            font-size: 12px;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class='controls'>
-                        <button onclick='startSimulation()'>▶ Start</button>
-                        <button onclick='stopSimulation()'>⏹ Stop</button>
-                        <button onclick='clearPackets()'>🗑 Clear</button>
-                        <div class='export-buttons'>
-                            <button onclick='exportData(\"json\")'>📄 JSON</button>
-                            <button onclick='exportData(\"csv\")'>📊 CSV</button>
-                            <button onclick='exportData(\"txt\")'>📝 TXT</button>
-                        </div>
-                    </div>
-                    
-                    <div class='stats'>
-                        <div class='stat'><div>📦 Total</div><div class='stat-value' id='total'>0</div></div>
-                        <div class='stat'><div>🔵 TCP</div><div class='stat-value' id='tcp'>0</div></div>
-                        <div class='stat'><div>🟢 UDP</div><div class='stat-value' id='udp'>0</div></div>
-                        <div class='stat'><div>🟠 ICMP</div><div class='stat-value' id='icmp'>0</div></div>
-                    </div>
-                    
-                    <h3>📡 Live Packet Stream</h3>
-                    <div class='packet-list' id='packets'></div>
-                    
-                    <script>
-                        let simulation = null;
-                        let packets = [];
-                        let stats = { total: 0, tcp: 0, udp: 0, icmp: 0 };
-                        
-                        const protocolsList = ['TCP', 'UDP', 'ICMP'];
-                        const ipsList = ['192.168.1.1', '192.168.1.100', '10.0.0.1', '172.16.0.1', '8.8.8.8', '1.1.1.1', '192.168.0.105', '10.0.0.25'];
-                        
-                        function generatePacket() {
-                            const proto = protocolsList[Math.floor(Math.random() * protocolsList.length)];
-                            const src = ipsList[Math.floor(Math.random() * ipsList.length)];
-                            let dst = ipsList[Math.floor(Math.random() * ipsList.length)];
-                            while (src === dst) dst = ipsList[Math.floor(Math.random() * ipsList.length)];
-                            
-                            return {
-                                time: new Date().toLocaleTimeString(),
-                                src: src,
-                                dst: dst,
-                                protocol: proto,
-                                size: Math.floor(Math.random() * 1400) + 64,
-                                port: proto !== 'ICMP' ? Math.floor(Math.random() * 65535) : null
-                            };
-                        }
-                        
-                        function addPacket() {
-                            const p = generatePacket();
-                            packets.unshift(p);
-                            stats.total++;
-                            stats[p.protocol.toLowerCase()]++;
-                            
-                            document.getElementById('total').textContent = stats.total;
-                            document.getElementById('tcp').textContent = stats.tcp;
-                            document.getElementById('udp').textContent = stats.udp;
-                            document.getElementById('icmp').textContent = stats.icmp;
-                            
-                            const packetDiv = document.createElement('div');
-                            packetDiv.className = `packet ${p.protocol.toLowerCase()}`;
-                            packetDiv.innerHTML = `[${p.time}] ${p.src}${p.port ? ':'+p.port : ''} → ${p.dst}${p.port ? ':'+p.port : ''} | ${p.protocol} | ${p.size} bytes`;
-                            
-                            const container = document.getElementById('packets');
-                            container.insertBefore(packetDiv, container.firstChild);
-                            
-                            while (container.children.length > 50) {
-                                container.removeChild(container.lastChild);
-                            }
-                        }
-                        
-                        function startSimulation() {
-                            if (simulation) {
-                                clearInterval(simulation);
-                                simulation = null;
-                            }
-                            simulation = setInterval(function() {
-                                addPacket();
-                            }, 800);
-                        }
-                        
-                        function stopSimulation() {
-                            if (simulation) {
-                                clearInterval(simulation);
-                                simulation = null;
-                            }
-                        }
-                        
-                        function clearPackets() {
-                            stopSimulation();
-                            packets = [];
-                            stats = { total: 0, tcp: 0, udp: 0, icmp: 0 };
-                            document.getElementById('total').textContent = '0';
-                            document.getElementById('tcp').textContent = '0';
-                            document.getElementById('udp').textContent = '0';
-                            document.getElementById('icmp').textContent = '0';
-                            document.getElementById('packets').innerHTML = '';
-                            startSimulation();
-                        }
-                        
-                        function exportData(format) {
-                            if (packets.length === 0) {
-                                alert('No packets to export!');
-                                return;
-                            }
-                            
-                            let content = '';
-                            let filename = `packet_dump_${Date.now()}`;
-                            
-                            if (format === 'json') {
-                                content = JSON.stringify(packets, null, 2);
-                                filename += '.json';
-                            } else if (format === 'csv') {
-                                content = 'Time,Source,Destination,Protocol,Size,Port\n';
-                                packets.forEach(p => {
-                                    content += `\"${p.time}\",\"${p.src}\",\"${p.dst}\",\"${p.protocol}\",${p.size},\"${p.port || 'N/A'}\"\n`;
-                                });
-                                filename += '.csv';
-                            } else if (format === 'txt') {
-                                content = '='.repeat(60) + '\n';
-                                content += 'PACKET CAPTURE EXPORT (SIMULATED DEMO)\n';
-                                content += '='.repeat(60) + '\n';
-                                content += `Date: ${new Date().toLocaleString()}\n`;
-                                content += `Total Packets: ${packets.length}\n`;
-                                content += `TCP: ${stats.tcp} | UDP: ${stats.udp} | ICMP: ${stats.icmp}\n`;
-                                content += '='.repeat(60) + '\n\n';
-                                
-                                packets.forEach((p, i) => {
-                                    content += `Packet #${i+1}\n`;
-                                    content += `  Time: ${p.time}\n`;
-                                    content += `  Source: ${p.src}\n`;
-                                    content += `  Destination: ${p.dst}\n`;
-                                    content += `  Protocol: ${p.protocol}\n`;
-                                    content += `  Size: ${p.size} bytes\n`;
-                                    content += '-'.repeat(40) + '\n';
-                                });
-                                filename += '.txt';
-                            }
-                            
-                            const blob = new Blob([content], {type: 'text/plain'});
-                            const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = filename;
-                            link.click();
-                            URL.revokeObjectURL(link.href);
-                        }
-                        
-                        // AUTO-START when page loads
-                        window.onload = function() {
-                            startSimulation();
-                        };
-                    </script>
-                </body>
-                </html>
-            "></iframe>
+            
+            <div class="demo-container">
+                <div class="demo-controls">
+                    <button class="demo-btn" id="startBtn">▶ Start</button>
+                    <button class="demo-btn" id="stopBtn">⏹ Stop</button>
+                    <button class="demo-btn" id="clearBtn">🗑 Clear</button>
+                    <button class="demo-btn demo-btn-export" id="exportJsonBtn">📄 JSON</button>
+                    <button class="demo-btn demo-btn-export" id="exportCsvBtn">📊 CSV</button>
+                    <button class="demo-btn demo-btn-export" id="exportTxtBtn">📝 TXT</button>
+                </div>
+                
+                <div class="demo-stats">
+                    <div class="demo-stat">📦 Total: <span id="demoTotal" class="demo-stat-value">0</span></div>
+                    <div class="demo-stat">🔵 TCP: <span id="demoTCP" class="demo-stat-value">0</span></div>
+                    <div class="demo-stat">🟢 UDP: <span id="demoUDP" class="demo-stat-value">0</span></div>
+                    <div class="demo-stat">🟠 ICMP: <span id="demoICMP" class="demo-stat-value">0</span></div>
+                </div>
+                
+                <h3 style="color: white;">📡 Live Packet Stream</h3>
+                <div class="demo-packet-list" id="demoPackets"></div>
+            </div>
         </div>
         
         <div class="instructions">
@@ -534,7 +390,7 @@
             </div>
             
             <pre><code># 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/packet-sniffer.git
+git clone https://github.com/ranejai954/packet-sniffer.git
 cd packet-sniffer
 
 # 2. Install dependencies
@@ -578,5 +434,141 @@ http://localhost:5000</code></pre>
             </p>
         </div>
     </div>
+    
+    <script>
+        // DEMO SIMULATION CODE - Runs directly in the page (not in iframe)
+        let simulationInterval = null;
+        let demoPackets = [];
+        let demoStats = { total: 0, tcp: 0, udp: 0, icmp: 0 };
+        
+        const protocols = ['TCP', 'UDP', 'ICMP'];
+        const ips = ['192.168.1.1', '192.168.1.100', '10.0.0.1', '172.16.0.1', '8.8.8.8', '1.1.1.1', '192.168.0.105', '10.0.0.25'];
+        
+        function generateMockPacket() {
+            const proto = protocols[Math.floor(Math.random() * protocols.length)];
+            const src = ips[Math.floor(Math.random() * ips.length)];
+            let dst = ips[Math.floor(Math.random() * ips.length)];
+            while (src === dst) dst = ips[Math.floor(Math.random() * ips.length)];
+            
+            return {
+                time: new Date().toLocaleTimeString(),
+                src: src,
+                dst: dst,
+                protocol: proto,
+                size: Math.floor(Math.random() * 1400) + 64,
+                port: proto !== 'ICMP' ? Math.floor(Math.random() * 65535) : null
+            };
+        }
+        
+        function addDemoPacket() {
+            const packet = generateMockPacket();
+            demoPackets.unshift(packet);
+            demoStats.total++;
+            demoStats[packet.protocol.toLowerCase()]++;
+            
+            // Update stats display
+            document.getElementById('demoTotal').textContent = demoStats.total;
+            document.getElementById('demoTCP').textContent = demoStats.tcp;
+            document.getElementById('demoUDP').textContent = demoStats.udp;
+            document.getElementById('demoICMP').textContent = demoStats.icmp;
+            
+            // Add packet to list
+            const packetDiv = document.createElement('div');
+            packetDiv.className = `demo-packet ${packet.protocol.toLowerCase()}`;
+            packetDiv.innerHTML = `[${packet.time}] ${packet.src}${packet.port ? ':'+packet.port : ''} → ${packet.dst}${packet.port ? ':'+packet.port : ''} | ${packet.protocol} | ${packet.size} bytes`;
+            
+            const container = document.getElementById('demoPackets');
+            container.insertBefore(packetDiv, container.firstChild);
+            
+            // Keep only last 50 packets
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        function startDemoSimulation() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+            }
+            simulationInterval = setInterval(addDemoPacket, 800);
+        }
+        
+        function stopDemoSimulation() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+        }
+        
+        function clearDemoPackets() {
+            stopDemoSimulation();
+            demoPackets = [];
+            demoStats = { total: 0, tcp: 0, udp: 0, icmp: 0 };
+            document.getElementById('demoTotal').textContent = '0';
+            document.getElementById('demoTCP').textContent = '0';
+            document.getElementById('demoUDP').textContent = '0';
+            document.getElementById('demoICMP').textContent = '0';
+            document.getElementById('demoPackets').innerHTML = '';
+            startDemoSimulation();
+        }
+        
+        function exportDemoData(format) {
+            if (demoPackets.length === 0) {
+                alert('No packets to export! Start the demo and capture some packets first.');
+                return;
+            }
+            
+            let content = '';
+            let filename = `packet_dump_${Date.now()}`;
+            
+            if (format === 'json') {
+                content = JSON.stringify(demoPackets, null, 2);
+                filename += '.json';
+            } else if (format === 'csv') {
+                content = 'Time,Source,Destination,Protocol,Size,Port\n';
+                demoPackets.forEach(p => {
+                    content += `"${p.time}","${p.src}","${p.dst}","${p.protocol}",${p.size},"${p.port || 'N/A'}"\n`;
+                });
+                filename += '.csv';
+            } else if (format === 'txt') {
+                content = '='.repeat(60) + '\n';
+                content += 'PACKET CAPTURE EXPORT (SIMULATED DEMO)\n';
+                content += '='.repeat(60) + '\n';
+                content += `Date: ${new Date().toLocaleString()}\n`;
+                content += `Total Packets: ${demoPackets.length}\n`;
+                content += `TCP: ${demoStats.tcp} | UDP: ${demoStats.udp} | ICMP: ${demoStats.icmp}\n`;
+                content += '='.repeat(60) + '\n\n';
+                
+                demoPackets.forEach((p, i) => {
+                    content += `Packet #${i+1}\n`;
+                    content += `  Time: ${p.time}\n`;
+                    content += `  Source: ${p.src}${p.port ? ':'+p.port : ''}\n`;
+                    content += `  Destination: ${p.dst}${p.port ? ':'+p.port : ''}\n`;
+                    content += `  Protocol: ${p.protocol}\n`;
+                    content += `  Size: ${p.size} bytes\n`;
+                    content += '-'.repeat(40) + '\n';
+                });
+                filename += '.txt';
+            }
+            
+            const blob = new Blob([content], {type: 'text/plain'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        
+        // Set up event listeners
+        document.getElementById('startBtn').addEventListener('click', startDemoSimulation);
+        document.getElementById('stopBtn').addEventListener('click', stopDemoSimulation);
+        document.getElementById('clearBtn').addEventListener('click', clearDemoPackets);
+        document.getElementById('exportJsonBtn').addEventListener('click', () => exportDemoData('json'));
+        document.getElementById('exportCsvBtn').addEventListener('click', () => exportDemoData('csv'));
+        document.getElementById('exportTxtBtn').addEventListener('click', () => exportDemoData('txt'));
+        
+        // AUTO-START when page loads
+        startDemoSimulation();
+    </script>
 </body>
 </html>
