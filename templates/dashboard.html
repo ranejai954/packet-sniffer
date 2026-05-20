@@ -77,6 +77,55 @@
             color: white;
         }
         
+        .btn-export {
+            background: #2196F3;
+            color: white;
+            position: relative;
+        }
+        
+        .btn-refresh {
+            background: #9C27B0;
+            color: white;
+        }
+        
+        /* Dropdown menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: white;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            z-index: 1;
+            margin-top: 5px;
+        }
+        
+        .dropdown-content button {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .dropdown-content button:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .show {
+            display: block;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -90,6 +139,12 @@
             padding: 15px;
             backdrop-filter: blur(10px);
             text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: scale(1.05);
         }
         
         .stat-number {
@@ -168,10 +223,60 @@
             animation: pulse 1s infinite;
         }
         
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
         .footer {
             text-align: center;
             margin-top: 20px;
             color: #e0e0e0;
+        }
+        
+        .filter-bar {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-input {
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            flex: 1;
+        }
+        
+        .filter-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .export-stats {
+            font-size: 12px;
+            margin-top: 10px;
+            color: #ccc;
         }
     </style>
 </head>
@@ -192,14 +297,36 @@
             <button class="btn btn-clear" onclick="clearPackets()">
                 🗑 Clear All
             </button>
+            
+            <div class="dropdown" style="display: inline-block;">
+                <button class="btn btn-export" onclick="toggleDropdown()">
+                    💾 Export Data ▼
+                </button>
+                <div id="exportDropdown" class="dropdown-content">
+                    <button onclick="exportData('json')">📄 Export as JSON</button>
+                    <button onclick="exportData('csv')">📊 Export as CSV</button>
+                    <button onclick="exportData('txt')">📝 Export as TXT</button>
+                    <button onclick="listExports()" style="border-top: 1px solid #ddd;">📁 View Exports</button>
+                </div>
+            </div>
+            
+            <button class="btn btn-refresh" onclick="refreshStats()">
+                🔄 Refresh Stats
+            </button>
+            
             <span id="captureStatus" style="margin-left: 20px;">
                 <span class="status status-inactive"></span>
                 <span>Not capturing</span>
             </span>
         </div>
         
+        <div class="filter-bar">
+            <input type="text" id="filterInput" class="filter-input" placeholder="🔍 Filter by IP, protocol, or port..." onkeyup="filterPackets()">
+            <span id="filterCount" style="font-size: 12px;"></span>
+        </div>
+        
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card" onclick="refreshStats()">
                 <div>📦 Total Packets</div>
                 <div class="stat-number" id="totalPackets">0</div>
             </div>
@@ -219,6 +346,7 @@
         
         <div class="packet-table-container">
             <h3>📡 Live Packet Stream</h3>
+            <div class="export-stats" id="exportStats"></div>
             <table class="packet-table">
                 <thead>
                     <tr>
@@ -245,15 +373,22 @@
     <script>
         // Connect to WebSocket
         var socket = io();
+        var allPackets = []; // Store all packets for filtering
         
         // Connection events
         socket.on('connect', function() {
             console.log('Connected to server');
+            showToast('✅ Connected to packet sniffer', 'success');
         });
         
         socket.on('new_packet', function(packet) {
+            allPackets.unshift(packet);
             addPacketToTable(packet);
             updateStats();
+        });
+        
+        socket.on('disconnect', function() {
+            showToast('❌ Disconnected from server', 'error');
         });
         
         function addPacketToTable(packet) {
@@ -280,6 +415,12 @@
             if (tableBody.children().length > 100) {
                 tableBody.children().last().remove();
             }
+            
+            // Apply filter if active
+            var filterValue = $('#filterInput').val().toLowerCase();
+            if (filterValue) {
+                filterPackets();
+            }
         }
         
         function updateStats() {
@@ -291,10 +432,18 @@
             });
         }
         
+        function refreshStats() {
+            updateStats();
+            showToast('📊 Statistics refreshed', 'info');
+        }
+        
         function startCapture() {
             $.post('/api/start', function(response) {
                 if (response.status === 'started') {
                     $('#captureStatus').html('<span class="status status-active capturing"></span><span>Capturing...</span>');
+                    showToast('🚀 Packet capture started', 'success');
+                } else if (response.status === 'already_running') {
+                    showToast('⚠️ Capture already running', 'warning');
                 }
             });
         }
@@ -303,22 +452,134 @@
             $.post('/api/stop', function(response) {
                 if (response.status === 'stopped') {
                     $('#captureStatus').html('<span class="status status-inactive"></span><span>Not capturing</span>');
+                    showToast('⏹️ Packet capture stopped', 'info');
                 }
             });
         }
         
         function clearPackets() {
-            $.post('/api/clear', function() {
-                $('#packetTableBody').html('<tr><td colspan="5" style="text-align: center;">No packets captured yet</td></tr>');
-                updateStats();
-            });
+            if (confirm('Are you sure you want to clear all captured packets?')) {
+                $.post('/api/clear', function() {
+                    allPackets = [];
+                    $('#packetTableBody').html('<tr><td colspan="5" style="text-align: center;">No packets captured yet</td></tr>');
+                    updateStats();
+                    showToast('🗑️ All packets cleared', 'info');
+                });
+            }
         }
+        
+        function filterPackets() {
+            var filterValue = $('#filterInput').val().toLowerCase();
+            var rows = $('#packetTableBody tr');
+            var visibleCount = 0;
+            
+            rows.each(function() {
+                var text = $(this).text().toLowerCase();
+                if (text.indexOf(filterValue) > -1) {
+                    $(this).show();
+                    visibleCount++;
+                } else {
+                    $(this).hide();
+                }
+            });
+            
+            $('#filterCount').text(`Showing ${visibleCount} of ${rows.length} packets`);
+        }
+        
+        // Export Functions
+        function toggleDropdown() {
+            document.getElementById('exportDropdown').classList.toggle('show');
+        }
+        
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.btn-export')) {
+                var dropdowns = document.getElementsByClassName('dropdown-content');
+                for (var i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                    }
+                }
+            }
+        }
+        
+        function exportData(format) {
+            $.ajax({
+                url: `/api/export/${format}`,
+                method: 'POST',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showToast(`✅ Exported ${response.count} packets to ${response.file}`, 'success');
+                        $('#exportStats').html(`Last export: ${response.file} (${response.count} packets)`);
+                    } else {
+                        showToast('❌ No packets to export!', 'error');
+                    }
+                },
+                error: function() {
+                    showToast('❌ Export failed!', 'error');
+                }
+            });
+            document.getElementById('exportDropdown').classList.remove('show');
+        }
+        
+        function listExports() {
+            $.get('/api/exports/list', function(files) {
+                if (files.length === 0) {
+                    showToast('📁 No exports found. Capture some packets first!', 'info');
+                } else {
+                    var message = '📁 Exported files:\n';
+                    files.forEach(function(file) {
+                        var sizeKB = (file.size / 1024).toFixed(2);
+                        message += `\n• ${file.name} (${sizeKB} KB) - ${file.modified}`;
+                    });
+                    alert(message);
+                }
+            });
+            document.getElementById('exportDropdown').classList.remove('show');
+        }
+        
+        function showToast(message, type) {
+            var toast = $('<div class="toast">' + message + '</div>');
+            $('body').append(toast);
+            
+            if (type === 'success') {
+                toast.css('background', '#4CAF50');
+            } else if (type === 'error') {
+                toast.css('background', '#f44336');
+            } else if (type === 'warning') {
+                toast.css('background', '#ff9800');
+            } else {
+                toast.css('background', '#2196F3');
+            }
+            
+            setTimeout(function() {
+                toast.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 3000);
+        }
+        
+        // Keyboard shortcuts
+        $(document).keydown(function(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                startCapture();
+            } else if (e.ctrlKey && e.key === 'x') {
+                e.preventDefault();
+                stopCapture();
+            } else if (e.key === 'Escape') {
+                clearPackets();
+            }
+        });
         
         // Load initial stats
         updateStats();
         
         // Auto-refresh stats every 2 seconds
         setInterval(updateStats, 2000);
+        
+        // Show keyboard shortcuts hint
+        console.log('Keyboard shortcuts: Ctrl+S (Start), Ctrl+X (Stop), Esc (Clear)');
     </script>
 </body>
 </html>
