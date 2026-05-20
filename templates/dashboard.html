@@ -36,10 +36,6 @@
             margin-bottom: 10px;
         }
         
-        .header p {
-            color: #e0e0e0;
-        }
-        
         .controls {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
@@ -62,33 +58,12 @@
             transform: translateY(-2px);
         }
         
-        .btn-start {
-            background: #4CAF50;
-            color: white;
-        }
+        .btn-start { background: #4CAF50; color: white; }
+        .btn-stop { background: #f44336; color: white; }
+        .btn-clear { background: #ff9800; color: white; }
+        .btn-export { background: #2196F3; color: white; }
+        .btn-refresh { background: #9C27B0; color: white; }
         
-        .btn-stop {
-            background: #f44336;
-            color: white;
-        }
-        
-        .btn-clear {
-            background: #ff9800;
-            color: white;
-        }
-        
-        .btn-export {
-            background: #2196F3;
-            color: white;
-            position: relative;
-        }
-        
-        .btn-refresh {
-            background: #9C27B0;
-            color: white;
-        }
-        
-        /* Dropdown menu */
         .dropdown {
             position: relative;
             display: inline-block;
@@ -122,9 +97,7 @@
             background-color: #f1f1f1;
         }
         
-        .show {
-            display: block;
-        }
+        .show { display: block; }
         
         .stats-grid {
             display: grid;
@@ -167,8 +140,7 @@
             border-collapse: collapse;
         }
         
-        .packet-table th,
-        .packet-table td {
+        .packet-table th, .packet-table td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
@@ -209,9 +181,7 @@
             box-shadow: 0 0 5px #4CAF50;
         }
         
-        .status-inactive {
-            background: #f44336;
-        }
+        .status-inactive { background: #f44336; }
         
         @keyframes pulse {
             0% { opacity: 1; }
@@ -219,9 +189,7 @@
             100% { opacity: 1; }
         }
         
-        .capturing {
-            animation: pulse 1s infinite;
-        }
+        .capturing { animation: pulse 1s infinite; }
         
         .toast {
             position: fixed;
@@ -246,12 +214,6 @@
             }
         }
         
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-            color: #e0e0e0;
-        }
-        
         .filter-bar {
             margin-bottom: 15px;
             display: flex;
@@ -273,10 +235,10 @@
             color: rgba(255,255,255,0.7);
         }
         
-        .export-stats {
-            font-size: 12px;
-            margin-top: 10px;
-            color: #ccc;
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #e0e0e0;
         }
     </style>
 </head>
@@ -288,20 +250,12 @@
         </div>
         
         <div class="controls">
-            <button class="btn btn-start" onclick="startCapture()">
-                ▶ Start Capture
-            </button>
-            <button class="btn btn-stop" onclick="stopCapture()">
-                ⏹ Stop Capture
-            </button>
-            <button class="btn btn-clear" onclick="clearPackets()">
-                🗑 Clear All
-            </button>
+            <button class="btn btn-start" onclick="startCapture()">▶ Start Capture</button>
+            <button class="btn btn-stop" onclick="stopCapture()">⏹ Stop Capture</button>
+            <button class="btn btn-clear" onclick="clearPackets()">🗑 Clear All</button>
             
-            <div class="dropdown" style="display: inline-block;">
-                <button class="btn btn-export" onclick="toggleDropdown()">
-                    💾 Export Data ▼
-                </button>
+            <div class="dropdown">
+                <button class="btn btn-export" onclick="toggleDropdown()">💾 Export Data ▼</button>
                 <div id="exportDropdown" class="dropdown-content">
                     <button onclick="exportData('json')">📄 Export as JSON</button>
                     <button onclick="exportData('csv')">📊 Export as CSV</button>
@@ -310,9 +264,7 @@
                 </div>
             </div>
             
-            <button class="btn btn-refresh" onclick="refreshStats()">
-                🔄 Refresh Stats
-            </button>
+            <button class="btn btn-refresh" onclick="refreshStats()">🔄 Refresh Stats</button>
             
             <span id="captureStatus" style="margin-left: 20px;">
                 <span class="status status-inactive"></span>
@@ -346,7 +298,6 @@
         
         <div class="packet-table-container">
             <h3>📡 Live Packet Stream</h3>
-            <div class="export-stats" id="exportStats"></div>
             <table class="packet-table">
                 <thead>
                     <tr>
@@ -371,11 +322,9 @@
     </div>
     
     <script>
-        // Connect to WebSocket
         var socket = io();
-        var allPackets = []; // Store all packets for filtering
+        var allPackets = [];
         
-        // Connection events
         socket.on('connect', function() {
             console.log('Connected to server');
             showToast('✅ Connected to packet sniffer', 'success');
@@ -394,7 +343,6 @@
         function addPacketToTable(packet) {
             var tableBody = $('#packetTableBody');
             
-            // Remove "no packets" message if present
             if (tableBody.children().length === 1 && tableBody.children().first().find('td').attr('colspan')) {
                 tableBody.empty();
             }
@@ -411,16 +359,12 @@
             
             tableBody.prepend(row);
             
-            // Keep only last 100 packets in view
             if (tableBody.children().length > 100) {
                 tableBody.children().last().remove();
             }
             
-            // Apply filter if active
             var filterValue = $('#filterInput').val().toLowerCase();
-            if (filterValue) {
-                filterPackets();
-            }
+            if (filterValue) filterPackets();
         }
         
         function updateStats() {
@@ -442,8 +386,6 @@
                 if (response.status === 'started') {
                     $('#captureStatus').html('<span class="status status-active capturing"></span><span>Capturing...</span>');
                     showToast('🚀 Packet capture started', 'success');
-                } else if (response.status === 'already_running') {
-                    showToast('⚠️ Capture already running', 'warning');
                 }
             });
         }
@@ -486,12 +428,10 @@
             $('#filterCount').text(`Showing ${visibleCount} of ${rows.length} packets`);
         }
         
-        // Export Functions
         function toggleDropdown() {
             document.getElementById('exportDropdown').classList.toggle('show');
         }
         
-        // Close dropdown when clicking outside
         window.onclick = function(event) {
             if (!event.target.matches('.btn-export')) {
                 var dropdowns = document.getElementsByClassName('dropdown-content');
@@ -509,8 +449,7 @@
                 method: 'POST',
                 success: function(response) {
                     if (response.status === 'success') {
-                        showToast(`✅ Exported ${response.count} packets to ${response.file}`, 'success');
-                        $('#exportStats').html(`Last export: ${response.file} (${response.count} packets)`);
+                        showToast(`✅ Exported ${response.count} packets as ${format.toUpperCase()}`, 'success');
                     } else {
                         showToast('❌ No packets to export!', 'error');
                     }
@@ -542,44 +481,25 @@
             var toast = $('<div class="toast">' + message + '</div>');
             $('body').append(toast);
             
-            if (type === 'success') {
-                toast.css('background', '#4CAF50');
-            } else if (type === 'error') {
-                toast.css('background', '#f44336');
-            } else if (type === 'warning') {
-                toast.css('background', '#ff9800');
-            } else {
-                toast.css('background', '#2196F3');
-            }
+            if (type === 'success') toast.css('background', '#4CAF50');
+            else if (type === 'error') toast.css('background', '#f44336');
+            else if (type === 'warning') toast.css('background', '#ff9800');
+            else toast.css('background', '#2196F3');
             
             setTimeout(function() {
-                toast.fadeOut(300, function() {
-                    $(this).remove();
-                });
+                toast.fadeOut(300, function() { $(this).remove(); });
             }, 3000);
         }
         
         // Keyboard shortcuts
         $(document).keydown(function(e) {
-            if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                startCapture();
-            } else if (e.ctrlKey && e.key === 'x') {
-                e.preventDefault();
-                stopCapture();
-            } else if (e.key === 'Escape') {
-                clearPackets();
-            }
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); startCapture(); }
+            else if (e.ctrlKey && e.key === 'x') { e.preventDefault(); stopCapture(); }
+            else if (e.key === 'Escape') clearPackets();
         });
         
-        // Load initial stats
         updateStats();
-        
-        // Auto-refresh stats every 2 seconds
         setInterval(updateStats, 2000);
-        
-        // Show keyboard shortcuts hint
-        console.log('Keyboard shortcuts: Ctrl+S (Start), Ctrl+X (Stop), Esc (Clear)');
     </script>
 </body>
 </html>
