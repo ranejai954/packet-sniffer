@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Packet Sniffer Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #e0e0e0;
+        }
+        
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-start {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-clear {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .packet-table-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .packet-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .packet-table th,
+        .packet-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .packet-table th {
+            background: rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+        }
+        
+        .packet-table tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .protocol-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .protocol-TCP { background: #4CAF50; }
+        .protocol-UDP { background: #2196F3; }
+        .protocol-ICMP { background: #ff9800; }
+        
+        .status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-active {
+            background: #4CAF50;
+            box-shadow: 0 0 5px #4CAF50;
+        }
+        
+        .status-inactive {
+            background: #f44336;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .capturing {
+            animation: pulse 1s infinite;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Network Packet Sniffer</h1>
+            <p>Real-time network traffic monitoring dashboard</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-start" onclick="startCapture()">
+                ▶ Start Capture
+            </button>
+            <button class="btn btn-stop" onclick="stopCapture()">
+                ⏹ Stop Capture
+            </button>
+            <button class="btn btn-clear" onclick="clearPackets()">
+                🗑 Clear All
+            </button>
+            <span id="captureStatus" style="margin-left: 20px;">
+                <span class="status status-inactive"></span>
+                <span>Not capturing</span>
+            </span>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div>📦 Total Packets</div>
+                <div class="stat-number" id="totalPackets">0</div>
+            </div>
+            <div class="stat-card">
+                <div>🔵 TCP Packets</div>
+                <div class="stat-number" id="tcpPackets">0</div>
+            </div>
+            <div class="stat-card">
+                <div>🟢 UDP Packets</div>
+                <div class="stat-number" id="udpPackets">0</div>
+            </div>
+            <div class="stat-card">
+                <div>🟠 ICMP Packets</div>
+                <div class="stat-number" id="icmpPackets">0</div>
+            </div>
+        </div>
+        
+        <div class="packet-table-container">
+            <h3>📡 Live Packet Stream</h3>
+            <table class="packet-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Source IP</th>
+                        <th>Destination IP</th>
+                        <th>Protocol</th>
+                        <th>Size (bytes)</th>
+                    </tr>
+                </thead>
+                <tbody id="packetTableBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center;">No packets captured yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <small>⚠️ Note: Run with sudo/administrator privileges for packet capture</small>
+        </div>
+    </div>
+    
+    <script>
+        // Connect to WebSocket
+        var socket = io();
+        
+        // Connection events
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+        
+        socket.on('new_packet', function(packet) {
+            addPacketToTable(packet);
+            updateStats();
+        });
+        
+        function addPacketToTable(packet) {
+            var tableBody = $('#packetTableBody');
+            
+            // Remove "no packets" message if present
+            if (tableBody.children().length === 1 && tableBody.children().first().find('td').attr('colspan')) {
+                tableBody.empty();
+            }
+            
+            var row = `
+                <tr>
+                    <td>${packet.timestamp}</td>
+                    <td>${packet.src_ip}${packet.src_port ? ':' + packet.src_port : ''}</td>
+                    <td>${packet.dst_ip}${packet.dst_port ? ':' + packet.dst_port : ''}</td>
+                    <td><span class="protocol-badge protocol-${packet.protocol}">${packet.protocol}</span></td>
+                    <td>${packet.size}</td>
+                </tr>
+            `;
+            
+            tableBody.prepend(row);
+            
+            // Keep only last 100 packets in view
+            if (tableBody.children().length > 100) {
+                tableBody.children().last().remove();
+            }
+        }
+        
+        function updateStats() {
+            $.get('/api/stats', function(data) {
+                $('#totalPackets').text(data.total_packets);
+                $('#tcpPackets').text(data.protocol_stats.TCP || 0);
+                $('#udpPackets').text(data.protocol_stats.UDP || 0);
+                $('#icmpPackets').text(data.protocol_stats.ICMP || 0);
+            });
+        }
+        
+        function startCapture() {
+            $.post('/api/start', function(response) {
+                if (response.status === 'started') {
+                    $('#captureStatus').html('<span class="status status-active capturing"></span><span>Capturing...</span>');
+                }
+            });
+        }
+        
+        function stopCapture() {
+            $.post('/api/stop', function(response) {
+                if (response.status === 'stopped') {
+                    $('#captureStatus').html('<span class="status status-inactive"></span><span>Not capturing</span>');
+                }
+            });
+        }
+        
+        function clearPackets() {
+            $.post('/api/clear', function() {
+                $('#packetTableBody').html('<tr><td colspan="5" style="text-align: center;">No packets captured yet</td></tr>');
+                updateStats();
+            });
+        }
+        
+        // Load initial stats
+        updateStats();
+        
+        // Auto-refresh stats every 2 seconds
+        setInterval(updateStats, 2000);
+    </script>
+</body>
+</html>
