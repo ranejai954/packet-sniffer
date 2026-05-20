@@ -23,7 +23,6 @@
             padding: 20px;
         }
         
-        /* Header Section */
         .header {
             background: white;
             border-radius: 20px;
@@ -66,7 +65,6 @@
         .badge-websocket { background: #010101; color: white; }
         .badge-demo { background: #4CAF50; color: white; }
         
-        /* Buttons */
         .btn-group {
             margin-top: 20px;
         }
@@ -79,6 +77,8 @@
             font-weight: 600;
             margin: 5px;
             transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border: none;
         }
         
         .btn:hover {
@@ -96,7 +96,6 @@
             color: white;
         }
         
-        /* Features Grid */
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -131,7 +130,6 @@
             line-height: 1.5;
         }
         
-        /* Demo Section */
         .demo-section {
             background: white;
             border-radius: 20px;
@@ -170,7 +168,6 @@
             background: #0a0e27;
         }
         
-        /* Instructions - FIXED for better readability */
         .instructions {
             background: white;
             border-radius: 20px;
@@ -225,10 +222,6 @@
             color: #333;
         }
         
-        .requirements-list li, .tech-list li {
-            margin-bottom: 5px;
-        }
-        
         .footer {
             text-align: center;
             color: white;
@@ -252,7 +245,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header Section -->
         <div class="header">
             <h1>🔍 Network Packet Sniffer</h1>
             <p class="subtitle">Real-time network traffic monitoring with beautiful web interface</p>
@@ -274,7 +266,6 @@
             </div>
         </div>
         
-        <!-- Features Grid -->
         <div class="features">
             <div class="feature-card">
                 <div class="feature-icon">📡</div>
@@ -292,21 +283,16 @@
                 <p>Modern dashboard with color-coded protocols and smooth animations</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🔌</div>
-                <h3>WebSocket Support</h3>
-                <p>Real-time updates without page refresh using Socket.IO</p>
+                <div class="feature-icon">💾</div>
+                <h3>Export Data</h3>
+                <p>Save captured packets as JSON, CSV, or TXT for offline analysis</p>
             </div>
         </div>
         
-        <!-- Demo Section -->
         <div id="demo" class="demo-section">
             <div class="demo-header">
-                <span class="demo-title">
-                    🎮 Live Demo Mode
-                </span>
-                <span class="demo-badge">
-                    ⚡ Simulated Traffic
-                </span>
+                <span class="demo-title">🎮 Live Demo Mode</span>
+                <span class="demo-badge">⚡ Simulated Traffic | Auto-Starts</span>
             </div>
             <iframe class="demo-frame" srcdoc="
                 <!DOCTYPE html>
@@ -339,6 +325,31 @@
                             font-weight: bold;
                         }
                         button:hover { opacity: 0.8; }
+                        .dropdown {
+                            position: relative;
+                            display: inline-block;
+                        }
+                        .dropdown-content {
+                            display: none;
+                            position: absolute;
+                            background: #0f1233;
+                            min-width: 140px;
+                            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+                            border-radius: 5px;
+                            z-index: 1;
+                        }
+                        .dropdown-content button {
+                            display: block;
+                            width: 100%;
+                            text-align: left;
+                            background: #0f1233;
+                            color: #00ff41;
+                            border: none;
+                            padding: 10px;
+                        }
+                        .dropdown-content button:hover {
+                            background: #1a1f4a;
+                        }
                         .stats {
                             background: #0f1233;
                             padding: 15px;
@@ -372,6 +383,21 @@
                             overflow-y: auto;
                         }
                         h3 { margin-bottom: 10px; color: #fff; }
+                        .toast {
+                            position: fixed;
+                            bottom: 20px;
+                            right: 20px;
+                            background: #4CAF50;
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            animation: fadeOut 2s ease-out forwards;
+                        }
+                        @keyframes fadeOut {
+                            0% { opacity: 1; }
+                            70% { opacity: 1; }
+                            100% { opacity: 0; visibility: hidden; }
+                        }
                     </style>
                 </head>
                 <body>
@@ -379,7 +405,14 @@
                         <button onclick='startSimulation()'>▶ Start</button>
                         <button onclick='stopSimulation()'>⏹ Stop</button>
                         <button onclick='clearPackets()'>🗑 Clear</button>
-                        <button onclick='exportToTXT()'>💾 Save Data</button>
+                        <div class='dropdown'>
+                            <button onclick='toggleDropdown()'>💾 Export ▼</button>
+                            <div id='exportMenu' class='dropdown-content'>
+                                <button onclick='exportData(\"json\")'>📄 JSON</button>
+                                <button onclick='exportData(\"csv\")'>📊 CSV</button>
+                                <button onclick='exportData(\"txt\")'>📝 TXT</button>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class='stats'>
@@ -441,12 +474,14 @@
                         function startSimulation() {
                             if (simulation) return;
                             simulation = setInterval(addPacket, 800);
+                            showToast('✅ Capture started');
                         }
                         
                         function stopSimulation() {
                             if (simulation) {
                                 clearInterval(simulation);
                                 simulation = null;
+                                showToast('⏹️ Capture stopped');
                             }
                         }
                         
@@ -459,40 +494,81 @@
                             document.getElementById('udp').textContent = '0';
                             document.getElementById('icmp').textContent = '0';
                             document.getElementById('packets').innerHTML = '';
+                            showToast('🗑️ Packets cleared');
+                            startSimulation();
                         }
                         
-                        function exportToTXT() {
+                        function toggleDropdown() {
+                            const menu = document.getElementById('exportMenu');
+                            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+                        }
+                        
+                        function exportData(format) {
                             if (packets.length === 0) {
-                                alert('No packets to export!');
+                                showToast('❌ No packets to export!', 'error');
                                 return;
                             }
                             
-                            let content = 'PACKET CAPTURE EXPORT (SIMULATED DEMO)\n';
-                            content += '='.repeat(60) + '\n';
-                            content += `Date: ${new Date().toLocaleString()}\n`;
-                            content += `Total Packets: ${packets.length}\n`;
-                            content += `TCP: ${stats.tcp} | UDP: ${stats.udp} | ICMP: ${stats.icmp}\n`;
-                            content += '='.repeat(60) + '\n\n';
+                            let content = '';
+                            let filename = `packet_dump_${Date.now()}`;
                             
-                            packets.forEach((p, i) => {
-                                content += `Packet #${i+1}\n`;
-                                content += `  Time: ${p.time}\n`;
-                                content += `  Source: ${p.src}\n`;
-                                content += `  Destination: ${p.dst}\n`;
-                                content += `  Protocol: ${p.protocol}\n`;
-                                content += `  Size: ${p.size} bytes\n`;
-                                content += '-'.repeat(40) + '\n';
-                            });
+                            if (format === 'json') {
+                                content = JSON.stringify(packets, null, 2);
+                                filename += '.json';
+                            } else if (format === 'csv') {
+                                content = 'Time,Source,Destination,Protocol,Size,Port\n';
+                                packets.forEach(p => {
+                                    content += `\"${p.time}\",\"${p.src}\",\"${p.dst}\",\"${p.protocol}\",${p.size},\"${p.port || 'N/A'}\"\n`;
+                                });
+                                filename += '.csv';
+                            } else if (format === 'txt') {
+                                content = '='.repeat(60) + '\n';
+                                content += 'PACKET CAPTURE EXPORT (SIMULATED DEMO)\n';
+                                content += '='.repeat(60) + '\n';
+                                content += `Date: ${new Date().toLocaleString()}\n`;
+                                content += `Total Packets: ${packets.length}\n`;
+                                content += `TCP: ${stats.tcp} | UDP: ${stats.udp} | ICMP: ${stats.icmp}\n`;
+                                content += '='.repeat(60) + '\n\n';
+                                
+                                packets.forEach((p, i) => {
+                                    content += `Packet #${i+1}\n`;
+                                    content += `  Time: ${p.time}\n`;
+                                    content += `  Source: ${p.src}\n`;
+                                    content += `  Destination: ${p.dst}\n`;
+                                    content += `  Protocol: ${p.protocol}\n`;
+                                    content += `  Size: ${p.size} bytes\n`;
+                                    content += '-'.repeat(40) + '\n';
+                                });
+                                filename += '.txt';
+                            }
                             
                             const blob = new Blob([content], {type: 'text/plain'});
                             const link = document.createElement('a');
                             link.href = URL.createObjectURL(blob);
-                            link.download = `packet_dump_${Date.now()}.txt`;
+                            link.download = filename;
                             link.click();
                             URL.revokeObjectURL(link.href);
+                            showToast(`✅ Exported as ${format.toUpperCase()}`);
                         }
                         
-                        // Auto-start on load
+                        function showToast(msg, type = 'success') {
+                            const toast = document.createElement('div');
+                            toast.className = 'toast';
+                                    toast.textContent = msg;
+                            if (type === 'error') toast.style.background = '#f44336';
+                            document.body.appendChild(toast);
+                            setTimeout(() => toast.remove(), 2000);
+                        }
+                        
+                        // Close dropdown when clicking outside
+                        document.addEventListener('click', function(event) {
+                            const menu = document.getElementById('exportMenu');
+                            if (menu && !event.target.closest('.dropdown')) {
+                                menu.style.display = 'none';
+                            }
+                        });
+                        
+                        // AUTO-START on load
                         startSimulation();
                     </script>
                 </body>
@@ -500,7 +576,6 @@
             "></iframe>
         </div>
         
-        <!-- Instructions - NOW WITH BETTER READABILITY -->
         <div class="instructions">
             <h3>🚀 Run Real Packet Sniffer on Your Machine</h3>
             
@@ -538,15 +613,14 @@ http://localhost:5000</code></pre>
                 <li><strong>Data Format:</strong> JSON, CSV, TXT</li>
             </ul>
 
-            <h3 style="margin-top: 20px;">💾 Export Captured Data</h3>
+            <h3 style="margin-top: 20px;">💾 Export Formats Available</h3>
             <ul class="tech-list">
-                <li>📄 <strong>JSON</strong> - Structured data for programming</li>
-                <li>📊 <strong>CSV</strong> - Open in Excel/Google Sheets</li>
-                <li>📝 <strong>TXT</strong> - Human-readable format</li>
+                <li>📄 <strong>JSON</strong> - Structured data for programming/APIs</li>
+                <li>📊 <strong>CSV</strong> - Open in Excel, Google Sheets, or any spreadsheet app</li>
+                <li>📝 <strong>TXT</strong> - Human-readable format for logs</li>
             </ul>
         </div>
         
-        <!-- Footer -->
         <div class="footer">
             <p>Made with 🐍 Python | Open Source MIT License</p>
             <p style="font-size: 12px; margin-top: 10px;">
