@@ -5,7 +5,7 @@ from datetime import datetime
 import threading
 import json
 import csv
-import os
+import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -15,11 +15,6 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 captured_packets = []
 is_capturing = False
 packet_stats = {'TCP': 0, 'UDP': 0, 'ICMP': 0}
-
-# Create exports folder if it doesn't exist
-EXPORT_FOLDER = 'exports'
-if not os.path.exists(EXPORT_FOLDER):
-    os.makedirs(EXPORT_FOLDER)
 
 def get_protocol_name(proto_num):
     protocols = {1: "ICMP", 6: "TCP", 17: "UDP"}
@@ -60,15 +55,12 @@ def packet_callback(packet):
     if packet_info:
         captured_packets.append(packet_info)
         
-        # Update statistics
         proto = packet_info['protocol']
         if proto in packet_stats:
             packet_stats[proto] += 1
         
-        # Send to connected clients via WebSocket
         socketio.emit('new_packet', packet_info)
         
-        # Keep only last 500 packets in memory
         if len(captured_packets) > 500:
             captured_packets.pop(0)
 
@@ -78,67 +70,14 @@ def start_sniffer():
     is_capturing = True
     sniff(prn=packet_callback, store=False, count=0)
 
-# ========== EXPORT FUNCTIONS ==========
-
-def export_to_json():
-    """Export captured packets to JSON file"""
-    if not captured_packets:
-        return None
-    
-    filename = f"{EXPORT_FOLDER}/packets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(filename, 'w') as f:
-        json.dump(captured_packets, f, indent=2)
-    return filename
-
-def export_to_csv():
-    """Export captured packets to CSV file"""
-    if not captured_packets:
-        return None
-    
-    filename = f"{EXPORT_FOLDER}/packets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    with open(filename, 'w', newline='') as f:
-        fieldnames = ['timestamp', 'src_ip', 'dst_ip', 'protocol', 'src_port', 'dst_port', 'size']
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for packet in captured_packets:
-            writer.writerow(packet)
-    return filename
-
-def export_to_txt():
-    """Export captured packets to readable TXT file"""
-    if not captured_packets:
-        return None
-    
-    filename = f"{EXPORT_FOLDER}/packets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-    with open(filename, 'w') as f:
-        f.write("=" * 80 + "\n")
-        f.write("PACKET CAPTURE EXPORT\n")
-        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"Total Packets: {len(captured_packets)}\n")
-        f.write(f"TCP: {packet_stats['TCP']} | UDP: {packet_stats['UDP']} | ICMP: {packet_stats['ICMP']}\n")
-        f.write("=" * 80 + "\n\n")
-        
-        for i, p in enumerate(captured_packets, 1):
-            f.write(f"Packet #{i}\n")
-            f.write(f"  Timestamp: {p['timestamp']}\n")
-            f.write(f"  Source: {p['src_ip']}:{p.get('src_port', 'N/A')}\n")
-            f.write(f"  Destination: {p['dst_ip']}:{p.get('dst_port', 'N/A')}\n")
-            f.write(f"  Protocol: {p['protocol']}\n")
-            f.write(f"  Size: {p['size']} bytes\n")
-            f.write("-" * 40 + "\n")
-    
-    return filename
-
 # ========== API ROUTES ==========
 
 @app.route('/')
 def index():
-    """Serve the dashboard"""
     return render_template('dashboard.html')
 
 @app.route('/api/start', methods=['POST'])
 def start_capture():
-    """API endpoint to start capturing"""
     global is_capturing
     if not is_capturing:
         thread = threading.Thread(target=start_sniffer)
@@ -149,14 +88,12 @@ def start_capture():
 
 @app.route('/api/stop', methods=['POST'])
 def stop_capture():
-    """API endpoint to stop capturing"""
     global is_capturing
     is_capturing = False
     return jsonify({'status': 'stopped', 'message': 'Packet capture stopped'})
 
 @app.route('/api/stats')
 def get_stats():
-    """Get current statistics"""
     return jsonify({
         'total_packets': len(captured_packets),
         'protocol_stats': packet_stats,
@@ -165,57 +102,75 @@ def get_stats():
 
 @app.route('/api/clear', methods=['POST'])
 def clear_packets():
-    """Clear all captured packets"""
     global captured_packets, packet_stats
     captured_packets = []
     packet_stats = {'TCP': 0, 'UDP': 0, 'ICMP': 0}
     return jsonify({'status': 'cleared', 'message': 'All packets cleared'})
 
-# ========== EXPORT API ROUTES ==========
+# ========== EXPORT ROUTES (USING GET FOR DOWNLOAD) ==========
 
-@app.route('/api/export/json', methods=['POST'])
+@app.route('/api/export/json', methods=['GET'])
 def api_export_json():
-    filename = export_to_json()
-    if filename:
-        return jsonify({'status': 'success', 'file': filename, 'count': len(captured_packets)})
-    return jsonify({'status': 'error', 'message': 'No packets to export'})
+    if not captured_packets:
+        return jsonify({'error': 'No packets to export'}), 400
+    
+    json_data = json.dumps(captured_packets, indent=2)
+    return send_file(
+        io.BytesIO(json_data.encode()),
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=f'packets_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    )
 
-@app.route('/api/export/csv', methods=['POST'])
+@app.route('/api/export/csv', methods=['GET'])
 def api_export_csv():
-    filename = export_to_csv()
-    if filename:
-        return jsonify({'status': 'success', 'file': filename, 'count': len(captured_packets)})
-    return jsonify({'status': 'error', 'message': 'No packets to export'})
+    if not captured_packets:
+        return jsonify({'error': 'No packets to export'}), 400
+    
+    output = io.StringIO()
+    fieldnames = ['timestamp', 'src_ip', 'dst_ip', 'protocol', 'src_port', 'dst_port', 'size']
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for packet in captured_packets:
+        row = {k: packet.get(k, '') for k in fieldnames}
+        writer.writerow(row)
+    
+    return send_file(
+        io.BytesIO(output.getvalue().encode()),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'packets_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    )
 
-@app.route('/api/export/txt', methods=['POST'])
+@app.route('/api/export/txt', methods=['GET'])
 def api_export_txt():
-    filename = export_to_txt()
-    if filename:
-        return jsonify({'status': 'success', 'file': filename, 'count': len(captured_packets)})
-    return jsonify({'status': 'error', 'message': 'No packets to export'})
-
-@app.route('/api/exports/list', methods=['GET'])
-def list_exports():
-    """List all exported files"""
-    files = []
-    if os.path.exists(EXPORT_FOLDER):
-        for f in os.listdir(EXPORT_FOLDER):
-            filepath = os.path.join(EXPORT_FOLDER, f)
-            if os.path.isfile(filepath):
-                files.append({
-                    'name': f,
-                    'size': os.path.getsize(filepath),
-                    'modified': datetime.fromtimestamp(os.path.getmtime(filepath)).strftime('%Y-%m-%d %H:%M:%S')
-                })
-    return jsonify(files)
-
-@app.route('/api/exports/download/<filename>', methods=['GET'])
-def download_export(filename):
-    """Download an exported file"""
-    filepath = os.path.join(EXPORT_FOLDER, filename)
-    if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True)
-    return jsonify({'status': 'error', 'message': 'File not found'}), 404
+    if not captured_packets:
+        return jsonify({'error': 'No packets to export'}), 400
+    
+    output = io.StringIO()
+    
+    output.write("=" * 80 + "\n")
+    output.write("PACKET CAPTURE EXPORT\n")
+    output.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    output.write(f"Total Packets: {len(captured_packets)}\n")
+    output.write(f"TCP: {packet_stats['TCP']} | UDP: {packet_stats['UDP']} | ICMP: {packet_stats['ICMP']}\n")
+    output.write("=" * 80 + "\n\n")
+    
+    for i, p in enumerate(captured_packets, 1):
+        output.write(f"Packet #{i}\n")
+        output.write(f"  Timestamp: {p['timestamp']}\n")
+        output.write(f"  Source: {p['src_ip']}:{p.get('src_port', 'N/A')}\n")
+        output.write(f"  Destination: {p['dst_ip']}:{p.get('dst_port', 'N/A')}\n")
+        output.write(f"  Protocol: {p['protocol']}\n")
+        output.write(f"  Size: {p['size']} bytes\n")
+        output.write("-" * 40 + "\n")
+    
+    return send_file(
+        io.BytesIO(output.getvalue().encode()),
+        mimetype='text/plain',
+        as_attachment=True,
+        download_name=f'packets_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt'
+    )
 
 # ========== WEBSOCKET EVENTS ==========
 
@@ -234,7 +189,6 @@ if __name__ == '__main__':
     print("=" * 60)
     print("🌐 Network Packet Sniffer Web Dashboard")
     print("=" * 60)
-    print(f"📁 Exports will be saved to: {os.path.abspath(EXPORT_FOLDER)}")
     print("🌐 Starting server at: http://localhost:5000")
     print("🛑 Press Ctrl+C to stop")
     print("=" * 60)
