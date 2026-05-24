@@ -238,7 +238,7 @@ copies or substantial portions of the Software.
 
 # 👨‍💻 Connect With Me
 
-![GitHub](https://img.shields.io/badge/GitHub-ranejai954-181717?style=flat&logo=github) ![LinkedIn](https://img.shields.io/badge/LinkedIn-Jai_Rane-0A66C2?style=flat&logo=linkedin)![Email](https://img.shields.io/badge/Email-ranejai954@gmail.com-D14836?style=flat&logo=gmail)
+[![GitHub](https://img.shields.io/badge/GitHub-ranejai954-181717?style=flat&logo=github)](https://github.com/ranejai954) [![LinkedIn](https://img.shields.io/badge/LinkedIn-Jai_Rane-0A66C2?style=flat&logo=linkedin)](https://www.linkedin.com/in/jai-rane-62ba58352) [![Email](https://img.shields.io/badge/Email-ranejai954@gmail.com-D14836?style=flat&logo=gmail)](mailto:ranejai954@gmail.com)
 
 ---
 
