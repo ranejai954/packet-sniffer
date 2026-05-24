@@ -135,7 +135,7 @@ packet-sniffer/
 
 # 🧩 Troubleshooting
 
-## Q: Permission denied error?
+## Q1: Permission denied error?
 
 Run with sudo/administrator privileges:
 
@@ -149,7 +149,7 @@ Run Command Prompt as Administrator
 
 ---
 
-## Q: No packets showing?
+## Q2: No packets showing?
 
 Make sure you have active network traffic.
 
@@ -161,7 +161,7 @@ ping google.com
 
 ---
 
-## Q: Scapy installation fails on Windows?
+## Q3: Scapy installation fails on Windows?
 
 Install Npcap first:
 
@@ -175,7 +175,7 @@ pip install scapy
 
 ---
 
-## Q: Scapy installation fails on Linux?
+## Q4: Scapy installation fails on Linux?
 
 ```bash
 sudo apt-get install python3-scapy
@@ -183,7 +183,7 @@ sudo apt-get install python3-scapy
 
 ---
 
-## Q: Scapy installation fails on Mac?
+## Q5: Scapy installation fails on Mac?
 
 ```bash
 brew install scapy
@@ -192,7 +192,7 @@ pip install scapy
 
 ---
 
-## Q: Port 5000 already in use?
+## Q6: Port 5000 already in use?
 
 Change the port in `sniffer.py`:
 
@@ -202,13 +202,13 @@ socketio.run(app, debug=True, port=5001)
 
 ---
 
-## Q: Demo not auto-starting?
+## Q7: Demo not auto-starting?
 
 Click the **Start** button in the demo window.
 
 ---
 
-## Q: Export not working in demo?
+## Q8: Export not working in demo?
 
 Make sure packets are already captured first.
 
@@ -238,11 +238,7 @@ copies or substantial portions of the Software.
 
 # 👨‍💻 Connect With Me
 
-![GitHub](https://img.shields.io/badge/GitHub-ranejai954-181717?style=flat&logo=github)
-
-![LinkedIn](https://img.shields.io/badge/LinkedIn-Jai_Rane-0A66C2?style=flat&logo=linkedin)
-
-![Email](https://img.shields.io/badge/Email-ranejai954@gmail.com-D14836?style=flat&logo=gmail)
+![GitHub](https://img.shields.io/badge/GitHub-ranejai954-181717?style=flat&logo=github) ![LinkedIn](https://img.shields.io/badge/LinkedIn-Jai_Rane-0A66C2?style=flat&logo=linkedin)![Email](https://img.shields.io/badge/Email-ranejai954@gmail.com-D14836?style=flat&logo=gmail)
 
 ---
 
