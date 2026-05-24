@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -260,7 +261,6 @@
                     <button onclick="exportData('json')">📄 Export as JSON</button>
                     <button onclick="exportData('csv')">📊 Export as CSV</button>
                     <button onclick="exportData('txt')">📝 Export as TXT</button>
-                    <button onclick="listExports()" style="border-top: 1px solid #ddd;">📁 View Exports</button>
                 </div>
             </div>
             
@@ -323,7 +323,6 @@
     
     <script>
         var socket = io();
-        var allPackets = [];
         
         socket.on('connect', function() {
             console.log('Connected to server');
@@ -331,7 +330,6 @@
         });
         
         socket.on('new_packet', function(packet) {
-            allPackets.unshift(packet);
             addPacketToTable(packet);
             updateStats();
         });
@@ -402,7 +400,6 @@
         function clearPackets() {
             if (confirm('Are you sure you want to clear all captured packets?')) {
                 $.post('/api/clear', function() {
-                    allPackets = [];
                     $('#packetTableBody').html('<tr><td colspan="5" style="text-align: center;">No packets captured yet</td></tr>');
                     updateStats();
                     showToast('🗑️ All packets cleared', 'info');
@@ -443,37 +440,26 @@
             }
         }
         
+        // FIXED EXPORT FUNCTION - This will download files directly to your computer
         function exportData(format) {
-            $.ajax({
-                url: `/api/export/${format}`,
-                method: 'POST',
-                success: function(response) {
-                    if (response.status === 'success') {
-                        showToast(`✅ Exported ${response.count} packets as ${format.toUpperCase()}`, 'success');
-                    } else {
-                        showToast('❌ No packets to export!', 'error');
-                    }
-                },
-                error: function() {
-                    showToast('❌ Export failed!', 'error');
-                }
-            });
-            document.getElementById('exportDropdown').classList.remove('show');
-        }
-        
-        function listExports() {
-            $.get('/api/exports/list', function(files) {
-                if (files.length === 0) {
-                    showToast('📁 No exports found. Capture some packets first!', 'info');
-                } else {
-                    var message = '📁 Exported files:\n';
-                    files.forEach(function(file) {
-                        var sizeKB = (file.size / 1024).toFixed(2);
-                        message += `\n• ${file.name} (${sizeKB} KB) - ${file.modified}`;
-                    });
-                    alert(message);
-                }
-            });
+            var totalPackets = parseInt($('#totalPackets').text());
+            
+            if (totalPackets === 0) {
+                showToast('❌ No packets to export! Capture some packets first.', 'error');
+                document.getElementById('exportDropdown').classList.remove('show');
+                return;
+            }
+            
+            showToast(`📥 Downloading ${format.toUpperCase()} file...`, 'success');
+            
+            // Create a hidden link and trigger download
+            var link = document.createElement('a');
+            link.href = `/api/export/${format}`;
+            link.download = `packets_${Date.now()}.${format}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
             document.getElementById('exportDropdown').classList.remove('show');
         }
         
@@ -491,15 +477,26 @@
             }, 3000);
         }
         
+        // Load initial stats
+        updateStats();
+        
+        // Auto-refresh stats every 2 seconds
+        setInterval(updateStats, 2000);
+        
         // Keyboard shortcuts
         $(document).keydown(function(e) {
-            if (e.ctrlKey && e.key === 's') { e.preventDefault(); startCapture(); }
-            else if (e.ctrlKey && e.key === 'x') { e.preventDefault(); stopCapture(); }
-            else if (e.key === 'Escape') clearPackets();
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                startCapture();
+            } else if (e.ctrlKey && e.key === 'x') {
+                e.preventDefault();
+                stopCapture();
+            } else if (e.key === 'Escape') {
+                clearPackets();
+            }
         });
         
-        updateStats();
-        setInterval(updateStats, 2000);
+        console.log('💡 Tips: Ctrl+S (Start), Ctrl+X (Stop), Esc (Clear)');
     </script>
 </body>
 </html>
